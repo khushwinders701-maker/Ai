@@ -1,43 +1,40 @@
 <!DOCTYPE html>
 <html lang="pa">
 <head>
-    <meta charset="UTF-8">
-    <title>AI English Coach</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        #app { width: 100%; max-width: 500px; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        #chat { height: 300px; overflow-y: auto; margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; }
-        button { padding: 10px 20px; border-radius: 10px; border: none; background: #3498db; color: white; cursor: pointer; }
+        body { background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; }
+        #call-screen { width: 350px; text-align: center; }
+        #avatar { width: 150px; height: 150px; background: #3498db; border-radius: 50%; margin: 20px auto; transition: 0.3s; }
+        .talking { transform: scale(1.1); background: #27ae60 !important; box-shadow: 0 0 20px #27ae60; }
+        button { padding: 15px 30px; font-size: 16px; border-radius: 30px; border: none; cursor: pointer; background: #e74c3c; color: white; }
     </style>
 </head>
 <body>
 
-<div id="app">
-    <h3>🤖 AI English Coach</h3>
-    <div id="chat"></div>
-    <button onclick="startListening()">🎙️ ਬੋਲ ਕੇ ਸਿੱਖੋ</button>
+<div id="call-screen">
+    <h3>English Guru AI</h3>
+    <div id="avatar"></div>
+    <p id="status">ਬਟਨ ਦਬਾ ਕੇ ਗੱਲ ਕਰੋ...</p>
+    <button onclick="startListening()">🎙️ Start Talk</button>
 </div>
 
 <script>
-    const chat = document.getElementById('chat');
-    
-    // AI ਨੂੰ ਹਦਾਇਤ ਕਿ ਉਹ ਗਲਤੀਆਂ ਸੁਧਾਰੇ
-    const systemPrompt = "ਤੁਸੀਂ ਇੱਕ ਸਖ਼ਤ ਪਰ ਦੋਸਤਾਨਾ ਇੰਗਲਿਸ਼ ਟੀਚਰ ਹੋ। ਜੇਕਰ ਯੂਜ਼ਰ ਕੋਈ ਗਲਤ ਅੰਗਰੇਜ਼ੀ ਬੋਲਦਾ ਹੈ, ਤਾਂ ਪਹਿਲਾਂ ਉਸਦੀ ਗਲਤੀ ਦੱਸੋ, ਫਿਰ ਸਹੀ ਤਰੀਕਾ ਦੱਸੋ, ਅਤੇ ਸਮਝਾਓ ਕਿ ਗਲਤੀ ਕਿਉਂ ਸੀ। ਜਵਾਬ ਛੋਟਾ ਰੱਖੋ।";
-
-    // 1. ਆਵਾਜ਼ ਸੁਣਨ ਲਈ (Speech Recognition)
+    const avatar = document.getElementById('avatar');
+    const status = document.getElementById('status');
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US';
+    
+    // AI ਹੁਣ ਪੰਜਾਬੀ ਅਤੇ ਅੰਗਰੇਜ਼ੀ ਦੋਵਾਂ ਵਿੱਚ ਜਵਾਬ ਦੇਵੇਗਾ
+    const systemPrompt = "You are a friendly English tutor. Speak in both English and Punjabi. Correct the user's grammar mistakes and explain why they were wrong. Be conversational like a video call.";
 
     function startListening() {
         recognition.start();
-        chat.innerHTML += "<p><i>ਕੁਝ ਬੋਲੋ...</i></p>";
+        status.innerText = "Listening...";
     }
 
     recognition.onresult = async (event) => {
         const userSpeech = event.results[0][0].transcript;
-        chat.innerHTML += `<p><b>ਤੁਸੀਂ:</b> ${userSpeech}</p>`;
-        
-        // AI ਨੂੰ ਭੇਜਣਾ
+        status.innerText = "Guru is thinking...";
+
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -46,24 +43,25 @@
             },
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userSpeech }
-                ]
+                messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userSpeech }]
             })
         });
 
         const data = await response.json();
         const aiReply = data.choices[0].message.content;
-        
-        // AI ਦਾ ਜਵਾਬ ਦਿਖਾਉਣਾ
-        chat.innerHTML += `<p><b>Teacher:</b> ${aiReply}</p>`;
-        
-        // 2. AI ਦਾ ਬੋਲਣਾ (Text-to-Speech)
-        const msg = new SpeechSynthesisUtterance(aiReply);
-        msg.lang = 'en-US';
-        window.speechSynthesis.speak(msg);
+        speak(aiReply);
     };
+
+    function speak(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-GB'; // English accent
+        
+        avatar.classList.add('talking'); // ਬੋਲਣ ਦੀ ਐਨੀਮੇਸ਼ਨ
+        utterance.onend = () => avatar.classList.remove('talking');
+        
+        window.speechSynthesis.speak(utterance);
+        status.innerText = "Guru is speaking...";
+    }
 </script>
 </body>
 </html>
