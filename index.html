@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pa">
+<head>
+    <meta charset="UTF-8">
+    <title>AI English Coach</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        #app { width: 100%; max-width: 500px; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        #chat { height: 300px; overflow-y: auto; margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; }
+        button { padding: 10px 20px; border-radius: 10px; border: none; background: #3498db; color: white; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <h3>🤖 AI English Coach</h3>
+    <div id="chat"></div>
+    <button onclick="startListening()">🎙️ ਬੋਲ ਕੇ ਸਿੱਖੋ</button>
+</div>
+
+<script>
+    const chat = document.getElementById('chat');
+    
+    // AI ਨੂੰ ਹਦਾਇਤ ਕਿ ਉਹ ਗਲਤੀਆਂ ਸੁਧਾਰੇ
+    const systemPrompt = "ਤੁਸੀਂ ਇੱਕ ਸਖ਼ਤ ਪਰ ਦੋਸਤਾਨਾ ਇੰਗਲਿਸ਼ ਟੀਚਰ ਹੋ। ਜੇਕਰ ਯੂਜ਼ਰ ਕੋਈ ਗਲਤ ਅੰਗਰੇਜ਼ੀ ਬੋਲਦਾ ਹੈ, ਤਾਂ ਪਹਿਲਾਂ ਉਸਦੀ ਗਲਤੀ ਦੱਸੋ, ਫਿਰ ਸਹੀ ਤਰੀਕਾ ਦੱਸੋ, ਅਤੇ ਸਮਝਾਓ ਕਿ ਗਲਤੀ ਕਿਉਂ ਸੀ। ਜਵਾਬ ਛੋਟਾ ਰੱਖੋ।";
+
+    // 1. ਆਵਾਜ਼ ਸੁਣਨ ਲਈ (Speech Recognition)
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'en-US';
+
+    function startListening() {
+        recognition.start();
+        chat.innerHTML += "<p><i>ਕੁਝ ਬੋਲੋ...</i></p>";
+    }
+
+    recognition.onresult = async (event) => {
+        const userSpeech = event.results[0][0].transcript;
+        chat.innerHTML += `<p><b>ਤੁਸੀਂ:</b> ${userSpeech}</p>`;
+        
+        // AI ਨੂੰ ਭੇਜਣਾ
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": "Bearer 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",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile",
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userSpeech }
+                ]
+            })
+        });
+
+        const data = await response.json();
+        const aiReply = data.choices[0].message.content;
+        
+        // AI ਦਾ ਜਵਾਬ ਦਿਖਾਉਣਾ
+        chat.innerHTML += `<p><b>Teacher:</b> ${aiReply}</p>`;
+        
+        // 2. AI ਦਾ ਬੋਲਣਾ (Text-to-Speech)
+        const msg = new SpeechSynthesisUtterance(aiReply);
+        msg.lang = 'en-US';
+        window.speechSynthesis.speak(msg);
+    };
+</script>
+</body>
+</html>
